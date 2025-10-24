@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8">
-  <title>Model 3D z wyborem kolorów</title>
+  <meta charset="UTF-8" />
+  <title>Podgląd 3D z kolorami</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #111; color: white; font-family: sans-serif; }
+    body { margin: 0; overflow: hidden; background-color: #111; color: white; font-family: sans-serif; }
     #controls {
       position: absolute; top: 10px; left: 10px;
       background: rgba(0,0,0,0.5); padding: 10px; border-radius: 10px;
@@ -23,52 +23,57 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.161.0/examples/js/controls/OrbitControls.js"></script>
 
   <script>
-    let scene = new THREE.Scene();
-    let camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-    let renderer = new THREE.WebGLRenderer({ antialias: true });
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    let controls = new THREE.OrbitControls(camera, renderer.domElement);
-    camera.position.set(0, 0, 100);
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    camera.position.set(0, 0, 80);
     controls.update();
 
+    // światło
     scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-    let light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(100, 100, 100);
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(50, 50, 100);
     scene.add(light);
 
+    // materiały do zmiany kolorów
     const baseMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
     const topMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
 
     const loader = new THREE.STLLoader();
-    loader.load('untitled.stl', function (geometry) {
-      geometry.computeBoundingBox();
+    loader.load('./untitled.stl', geometry => {
       geometry.center();
+      geometry.computeBoundingBox();
 
+      const size = geometry.boundingBox.getSize(new THREE.Vector3());
+      const scale = 50 / Math.max(size.x, size.y, size.z);
+      geometry.scale(scale, scale, scale);
+
+      // model podstawy i góry (tu tylko symulujemy podział)
       const base = new THREE.Mesh(geometry, baseMaterial);
       const top = new THREE.Mesh(geometry.clone(), topMaterial);
 
-      const size = geometry.boundingBox.getSize(new THREE.Vector3());
-      const splitY = size.y / 2;
-
-      base.onBeforeRender = () => {
-        renderer.clippingPlanes = [ new THREE.Plane(new THREE.Vector3(0, 1, 0), 0) ];
-      };
-      top.onBeforeRender = () => {
-        renderer.clippingPlanes = [ new THREE.Plane(new THREE.Vector3(0, -1, 0), 0) ];
-      };
-
-      base.scale.set(0.5, 0.5, 0.5);
-      top.scale.set(0.5, 0.5, 0.5);
+      base.position.y = -size.y * 0.05;
+      top.position.y = -size.y * 0.05 + 0.001;
 
       scene.add(base);
       scene.add(top);
+    }, undefined, error => {
+      console.error('Błąd wczytywania STL:', error);
     });
 
-    document.getElementById('baseColor').addEventListener('input', e => baseMaterial.color.set(e.target.value));
-    document.getElementById('topColor').addEventListener('input', e => topMaterial.color.set(e.target.value));
+    // zmiana kolorów
+    document.getElementById('baseColor').addEventListener('input', e => {
+      baseMaterial.color.set(e.target.value);
+    });
+    document.getElementById('topColor').addEventListener('input', e => {
+      topMaterial.color.set(e.target.value);
+    });
 
+    // animacja
     function animate() {
       requestAnimationFrame(animate);
       controls.update();
